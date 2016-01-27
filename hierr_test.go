@@ -51,7 +51,7 @@ func ExampleError() {
 	// }}}
 }
 
-func ExampleBranchDelimiter() {
+func ExampleError_Error() {
 	BranchDelimiter = "* "
 	BranchIndent = 0
 
