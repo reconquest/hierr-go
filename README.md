@@ -1,4 +1,4 @@
-# Hierarchy errors made right
+# Hierarchical errors made right
 
 Hate seeing `error: exit status 128` in the output of programs without actual
 explanation what is going wrong?
