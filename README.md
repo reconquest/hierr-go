@@ -32,3 +32,5 @@ return fmt.Errorf("can't pull remote '%s': %s", remote, err)
 ```
 return hierr.Errorf(err, "can't pull remote '%s'", remote)
 ```
+
+Docs: https://godoc.org/github.com/seletskiy/hierr
