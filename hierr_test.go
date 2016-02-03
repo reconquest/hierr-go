@@ -5,33 +5,23 @@ import "fmt"
 
 func ExampleError() {
 	testcases := []error{
-		Errorf(nil, ""),
 		Errorf(nil, "simple error"),
-		Errorf(nil, "integer: %d", 1),
 		Errorf(errors.New("nested"), "top level"),
 		Errorf(errors.New("nested"), "top level: %s", "formatting"),
-		Errorf(Errorf(errors.New("low level"), "nested"), "top level"),
+		Errorf(Errorf(errors.New("low level"), "nested"), "top level integer %d", 1),
 	}
 
 	for _, test := range testcases {
 		fmt.Println()
 		fmt.Println("{{{")
-		fmt.Println(test.Error())
+		fmt.Println(test)
 		fmt.Println("}}}")
 	}
 
 	// Output:
 	//
 	// {{{
-	//
-	// }}}
-	//
-	// {{{
-	// simple error
-	// }}}
-	//
-	// {{{
-	// integer: 1
+	// <nil>
 	// }}}
 	//
 	// {{{
@@ -45,7 +35,7 @@ func ExampleError() {
 	// }}}
 	//
 	// {{{
-	// top level
+	// top level integer 1
 	// └─ nested
 	//    └─ low level
 	// }}}
