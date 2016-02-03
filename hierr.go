@@ -53,8 +53,12 @@ type Error struct {
 //
 // Have same semantics as `fmt.Errorf()`.
 //
-// With nestedError == nil call will be equal to `fmt.Errorf()`.
+// With nestedError == nil method returns nil error.
 func Errorf(nestedError error, message string, args ...interface{}) error {
+	if nestedError == nil {
+		return nil
+	}
+
 	return Error{
 		Message: fmt.Sprintf(message, args...),
 		Nested:  nestedError,
