@@ -46,15 +46,22 @@ type Error struct {
 	Message string
 
 	// Nested error, which can be hierr.Error as well.
-	Nested error
+	Nested interface{}
 }
 
-// Errorf creates new hierr.Error.
+// Error is either `error` or string.
+type NestedError interface{}
+
+// Errorf creates new hierarchy error.
 //
 // Have same semantics as `fmt.Errorf()`.
 //
-// With nestedError == nil call will be equal to `fmt.Errorf()`.
-func Errorf(nestedError error, message string, args ...interface{}) error {
+// With topError == nil call will be equal to `fmt.Errorf()`.
+func Errorf(
+	nestedError NestedError,
+	message string,
+	args ...interface{},
+) error {
 	return Error{
 		Message: fmt.Sprintf(message, args...),
 		Nested:  nestedError,
@@ -71,7 +78,7 @@ func (err Error) Error() string {
 	return err.Message + "\n" +
 		BranchDelimiter +
 		strings.Replace(
-			err.Nested.Error(),
+			fmt.Sprintf("%s", err.Nested),
 			"\n",
 			"\n"+strings.Repeat(" ", BranchIndent),
 			-1,

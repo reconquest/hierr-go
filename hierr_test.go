@@ -11,6 +11,8 @@ func ExampleError() {
 		Errorf(errors.New("nested"), "top level"),
 		Errorf(errors.New("nested"), "top level: %s", "formatting"),
 		Errorf(Errorf(errors.New("low level"), "nested"), "top level"),
+
+		Errorf(Errorf("string error", "nested"), "top level"),
 	}
 
 	for _, test := range testcases {
@@ -48,6 +50,12 @@ func ExampleError() {
 	// top level
 	// └─ nested
 	//    └─ low level
+	// }}}
+	//
+	// {{{
+	// top level
+	// └─ nested
+	//    └─ string error
 	// }}}
 }
 
