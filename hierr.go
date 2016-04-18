@@ -78,7 +78,7 @@ func (err Error) Error() string {
 	return err.Message + "\n" +
 		BranchDelimiter +
 		strings.Replace(
-			fmt.Sprintf("%s", err.Nested),
+			fmt.Sprint(err.Nested),
 			"\n",
 			"\n"+strings.Repeat(" ", BranchIndent),
 			-1,
