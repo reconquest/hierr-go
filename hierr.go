@@ -56,7 +56,7 @@ type NestedError interface{}
 //
 // Have same semantics as `fmt.Errorf()`.
 //
-// With topError == nil call will be equal to `fmt.Errorf()`.
+// With nestedError == nil call will be equal to `fmt.Errorf()`.
 func Errorf(
 	nestedError NestedError,
 	message string,
