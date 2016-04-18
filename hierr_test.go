@@ -23,6 +23,14 @@ func ExampleError() {
 		fmt.Println("}}}")
 	}
 
+	fmt.Println()
+
+	exiter = func(code int) {
+		fmt.Println("exit code:", code)
+	}
+
+	Fatalf("wow", "critical error")
+
 	// Output:
 	//
 	// {{{
@@ -63,6 +71,10 @@ func ExampleError() {
 	// top level
 	// └─ byte
 	// }}}
+	//
+	// critical error
+	// └─ wow
+	// exit code: 1
 }
 
 func ExampleError_Error() {

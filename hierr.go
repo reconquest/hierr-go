@@ -14,6 +14,7 @@ package hierr
 
 import (
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -49,6 +50,10 @@ type Error struct {
 	Nested interface{}
 }
 
+var (
+	exiter = os.Exit
+)
+
 // Error is either `error` or string.
 type NestedError interface{}
 
@@ -66,6 +71,15 @@ func Errorf(
 		Message: fmt.Sprintf(message, args...),
 		Nested:  nestedError,
 	}
+}
+
+func Fatalf(
+	nestedError NestedError,
+	message string,
+	args ...interface{},
+) {
+	fmt.Println(Errorf(nestedError, message, args...))
+	exiter(1)
 }
 
 // Error returns string representation of hierarchical error. If no nested
