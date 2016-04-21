@@ -1,7 +1,11 @@
 package hierr
 
-import "errors"
-import "fmt"
+import (
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
+)
 
 func ExampleError() {
 	testcases := []error{
@@ -29,7 +33,22 @@ func ExampleError() {
 		fmt.Println("exit code:", code)
 	}
 
+	tempfile, err := ioutil.TempFile(os.TempDir(), "stderr")
+	if err != nil {
+		panic(err)
+	}
+
+	os.Stderr = tempfile
+
 	Fatalf("wow", "critical error")
+
+	tempfile.Seek(0, 0)
+	text, err := ioutil.ReadAll(tempfile)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("stderr:\n" + string(text))
 
 	// Output:
 	//
@@ -72,14 +91,18 @@ func ExampleError() {
 	// └─ byte
 	// }}}
 	//
+	// exit code: 1
+	// stderr:
 	// critical error
 	// └─ wow
-	// exit code: 1
 }
 
-func ExampleError_Error() {
+func ExampleBranchDelimiter() {
+	defer func() {
+		BranchDelimiter = BranchDelimiterBox
+	}()
+
 	BranchDelimiter = "* "
-	BranchIndent = 0
 
 	testcases := []error{
 		Errorf(Errorf(errors.New("third"), "second"), "top level"),
@@ -97,6 +120,92 @@ func ExampleError_Error() {
 	// {{{
 	// top level
 	// * second
-	// * third
+	//    * third
+	// }}}
+}
+
+func ExampleBranchIndent() {
+	defer func() {
+		BranchIndent = 3
+	}()
+
+	BranchIndent = 0
+
+	testcases := []error{
+		Errorf(Errorf(errors.New("third"), "second"), "top level"),
+	}
+
+	for _, test := range testcases {
+		fmt.Println()
+		fmt.Println("{{{")
+		fmt.Println(test.Error())
+		fmt.Println("}}}")
+	}
+
+	// Output:
+	//
+	// {{{
+	// top level
+	// └─ second
+	// └─ third
+	// }}}
+}
+
+func ExamplePush() {
+	testcases := []error{
+		Push(
+			"the godfather",
+			Push(
+				"son A",
+				"A's son 1",
+				Push(
+					"A's son 2",
+					Push("2' son X",
+						Push("X's son @"),
+						Push("X's son #"),
+					),
+				),
+			),
+			Push("son B",
+				errors.New("B's son 1"),
+				errors.New("B's son 2"),
+				Push("orphan"),
+			),
+			Errorf(
+				"B's son 1",
+				"son B",
+			),
+			errors.New("police"),
+		),
+	}
+
+	for _, test := range testcases {
+		fmt.Println()
+		fmt.Println("{{{")
+		fmt.Println(test.Error())
+		fmt.Println("}}}")
+	}
+
+	// Output:
+	//
+	// {{{
+	//the godfather
+	//├─ son A
+	//│  ├─ A's son 1
+	//│  │
+	//│  └─ A's son 2
+	//│     └─ 2' son X
+	//│        ├─ X's son @
+	//│        └─ X's son #
+	//│
+	//├─ son B
+	//│  ├─ B's son 1
+	//│  ├─ B's son 2
+	//│  └─ orphan
+	//│
+	//├─ son B
+	//│  └─ B's son 1
+	//│
+	//└─ police
 	// }}}
 }
