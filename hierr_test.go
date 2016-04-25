@@ -209,3 +209,87 @@ func ExamplePush() {
 	//└─ police
 	// }}}
 }
+
+type smartError struct {
+	Text string
+	Err  error
+}
+
+func (smart smartError) HierarchicalError() string {
+	return Errorf(smart.Err, smart.Text).Error()
+}
+
+func ExampleHierarchicalError() {
+	testcases := []error{
+		Errorf(
+			Errorf(
+				smartError{"smart", errors.New("hierarchical")},
+				"second",
+			),
+			"top level",
+		),
+		Errorf(
+			Errorf(
+				fmt.Sprintf(
+					"%s",
+					smartError{"smart plain", errors.New("error")},
+				),
+				"second",
+			),
+			"top level",
+		),
+		Push(
+			smartError{"smart", errors.New("hierarchical")},
+			smartError{"smart", errors.New("hierarchical")},
+		),
+		Push(
+			smartError{"smart", errors.New("hierarchical")},
+			Push(
+				smartError{"smart", errors.New("hierarchical")},
+				smartError{"smart", errors.New("hierarchical")},
+				smartError{"smart", Errorf("nested", "top")},
+			),
+		),
+	}
+
+	for _, test := range testcases {
+		fmt.Println()
+		fmt.Println("{{{")
+		fmt.Println(test.Error())
+		fmt.Println("}}}")
+	}
+
+	// Output:
+	//
+	// {{{
+	// top level
+	// └─ second
+	//    └─ smart
+	//       └─ hierarchical
+	// }}}
+	//
+	// {{{
+	// top level
+	// └─ second
+	//    └─ {smart plain error}
+	// }}}
+	//
+	// {{{
+	// smart
+	// └─ hierarchical
+	// └─ smart
+	//    └─ hierarchical
+	// }}}
+	//
+	// {{{
+	// smart
+	// └─ hierarchical
+	// └─ smart
+	//    └─ hierarchical
+	//    ├─ smart
+	//    │  └─ hierarchical
+	//    └─ smart
+	//       └─ top
+	//          └─ nested
+	// }}}
+}
