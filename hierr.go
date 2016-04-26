@@ -168,7 +168,7 @@ func (err Error) Error() string {
 			message = message + "\n" +
 				splitter +
 				strings.Replace(
-					toString(child),
+					String(child),
 					"\n",
 					"\n"+indentation,
 					-1,
@@ -182,7 +182,7 @@ func (err Error) Error() string {
 		return err.Message + "\n" +
 			BranchDelimiter +
 			strings.Replace(
-				toString(err.Nested),
+				String(err.Nested),
 				"\n",
 				"\n"+strings.Repeat(" ", BranchIndent),
 				-1,
@@ -196,7 +196,7 @@ func Push(topError NestedError, childError ...NestedError) error {
 	parent, ok := topError.(Error)
 	if !ok {
 		parent = Error{
-			Message: toString(topError),
+			Message: String(topError),
 		}
 	}
 
@@ -216,7 +216,10 @@ func Push(topError NestedError, childError ...NestedError) error {
 	}
 }
 
-func toString(object interface{}) string {
+// String returns string representation of given object, if object implements
+// HierarchicalError then will be returned result of calling
+// object.HierarchicalError().
+func String(object interface{}) string {
 	if hierr, ok := object.(HierarchicalError); ok {
 		return hierr.HierarchicalError()
 	}
