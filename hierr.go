@@ -80,6 +80,13 @@ type Error struct {
 	Nested interface{}
 }
 
+// HierarchicalError represents interface, which methods will be used instead
+// of calling String() and Error() methods.
+type HierarchicalError interface {
+	// HierarchicalError returns hierarhical string representation.
+	HierarchicalError() string
+}
+
 var (
 	exiter = os.Exit
 )
@@ -161,7 +168,7 @@ func (err Error) Error() string {
 			message = message + "\n" +
 				splitter +
 				strings.Replace(
-					fmt.Sprintf("%s", child),
+					String(child),
 					"\n",
 					"\n"+indentation,
 					-1,
@@ -175,7 +182,7 @@ func (err Error) Error() string {
 		return err.Message + "\n" +
 			BranchDelimiter +
 			strings.Replace(
-				fmt.Sprintf("%s", err.Nested),
+				String(err.Nested),
 				"\n",
 				"\n"+strings.Repeat(" ", BranchIndent),
 				-1,
@@ -189,7 +196,7 @@ func Push(topError NestedError, childError ...NestedError) error {
 	parent, ok := topError.(Error)
 	if !ok {
 		parent = Error{
-			Message: fmt.Sprintf("%s", topError),
+			Message: String(topError),
 		}
 	}
 
@@ -207,4 +214,15 @@ func Push(topError NestedError, childError ...NestedError) error {
 		Message: parent.Message,
 		Nested:  children,
 	}
+}
+
+// String returns string representation of given object, if object implements
+// HierarchicalError then will be returned result of calling
+// object.HierarchicalError().
+func String(object interface{}) string {
+	if hierr, ok := object.(HierarchicalError); ok {
+		return hierr.HierarchicalError()
+	}
+
+	return fmt.Sprintf("%s", object)
 }
