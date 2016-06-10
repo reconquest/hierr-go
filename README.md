@@ -1,4 +1,4 @@
-# Hierarchical errors made right
+# Hierarchical errors made right [![Go Report Card](https://goreportcard.com/badge/github.com/seletskiy/hierr)](https://goreportcard.com/report/github.com/seletskiy/hierr)
 
 Hate seeing `error: exit status 128` in the output of programs without actual
 explanation what is going wrong?
