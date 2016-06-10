@@ -91,7 +91,7 @@ var (
 	exiter = os.Exit
 )
 
-// Error is either `error` or string.
+// NestedError is either `error` or string.
 type NestedError interface{}
 
 // Errorf creates new hierarchy error.
@@ -128,55 +128,7 @@ func (err Error) Error() string {
 		return err.Message
 
 	case []NestedError:
-		message := err.Message
-
-		prolongate := false
-		for _, child := range children {
-			if childError, ok := child.(Error); ok {
-				errs, ok := childError.Nested.([]NestedError)
-				if ok && len(errs) > 0 {
-					prolongate = true
-					break
-				}
-			}
-		}
-
-		for index, child := range children {
-			var (
-				splitter      = BranchSplitter
-				chainer       = BranchChainer
-				chainerLength = len([]rune(BranchChainer))
-			)
-
-			if index == len(children)-1 {
-				splitter = BranchDelimiter
-				chainer = strings.Repeat(" ", chainerLength)
-			}
-
-			indentation := chainer
-			if BranchIndent >= chainerLength {
-				indentation += strings.Repeat(" ", BranchIndent-chainerLength)
-			}
-
-			prolongator := ""
-			if prolongate && index < len(children)-1 {
-				prolongator = "\n" + strings.TrimRightFunc(
-					chainer, unicode.IsSpace,
-				)
-			}
-
-			message = message + "\n" +
-				splitter +
-				strings.Replace(
-					String(child),
-					"\n",
-					"\n"+indentation,
-					-1,
-				) +
-				prolongator
-		}
-
-		return message
+		return formatNestedError(err, children)
 
 	default:
 		return err.Message + "\n" +
@@ -225,4 +177,56 @@ func String(object interface{}) string {
 	}
 
 	return fmt.Sprintf("%s", object)
+}
+
+func formatNestedError(err Error, children []NestedError) string {
+	message := err.Message
+
+	prolongate := false
+	for _, child := range children {
+		if childError, ok := child.(Error); ok {
+			errs, ok := childError.Nested.([]NestedError)
+			if ok && len(errs) > 0 {
+				prolongate = true
+				break
+			}
+		}
+	}
+
+	for index, child := range children {
+		var (
+			splitter      = BranchSplitter
+			chainer       = BranchChainer
+			chainerLength = len([]rune(BranchChainer))
+		)
+
+		if index == len(children)-1 {
+			splitter = BranchDelimiter
+			chainer = strings.Repeat(" ", chainerLength)
+		}
+
+		indentation := chainer
+		if BranchIndent >= chainerLength {
+			indentation += strings.Repeat(" ", BranchIndent-chainerLength)
+		}
+
+		prolongator := ""
+		if prolongate && index < len(children)-1 {
+			prolongator = "\n" + strings.TrimRightFunc(
+				chainer, unicode.IsSpace,
+			)
+		}
+
+		message = message + "\n" +
+			splitter +
+			strings.Replace(
+				String(child),
+				"\n",
+				"\n"+indentation,
+				-1,
+			) +
+			prolongator
+	}
+
+	return message
 }

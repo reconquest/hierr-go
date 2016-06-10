@@ -15,8 +15,7 @@ func ExampleError() {
 		Errorf(errors.New("nested"), "top level"),
 		Errorf(errors.New("nested"), "top level: %s", "formatting"),
 		Errorf(Errorf(errors.New("low level"), "nested"), "top level"),
-
-		Errorf(Errorf("string error", "nested"), "top level"),
+		Errorf(Errorf(fmt.Sprintf("%s", "string"), "nested"), "top level"),
 		Errorf([]byte("byte"), "top level"),
 	}
 
@@ -40,9 +39,9 @@ func ExampleError() {
 
 	os.Stderr = tempfile
 
-	Fatalf("wow", "critical error")
+	Fatalf(fmt.Sprintf("%s", "wow"), "critical error")
 
-	tempfile.Seek(0, 0)
+	_ := tempfile.Seek(0, 0)
 	text, err := ioutil.ReadAll(tempfile)
 	if err != nil {
 		panic(err)
@@ -83,7 +82,7 @@ func ExampleError() {
 	// {{{
 	// top level
 	// └─ nested
-	//    └─ string error
+	//    └─ string
 	// }}}
 	//
 	// {{{
@@ -172,7 +171,7 @@ func ExamplePush() {
 				Push("orphan"),
 			),
 			Errorf(
-				"B's son 1",
+				fmt.Sprintf("%s", "B's son 1"),
 				"son B",
 			),
 			errors.New("police"),
@@ -189,24 +188,24 @@ func ExamplePush() {
 	// Output:
 	//
 	// {{{
-	//the godfather
-	//├─ son A
-	//│  ├─ A's son 1
-	//│  │
-	//│  └─ A's son 2
-	//│     └─ 2' son X
-	//│        ├─ X's son @
-	//│        └─ X's son #
-	//│
-	//├─ son B
-	//│  ├─ B's son 1
-	//│  ├─ B's son 2
-	//│  └─ orphan
-	//│
-	//├─ son B
-	//│  └─ B's son 1
-	//│
-	//└─ police
+	// the godfather
+	// ├─ son A
+	// │  ├─ A's son 1
+	// │  │
+	// │  └─ A's son 2
+	// │     └─ 2' son X
+	// │        ├─ X's son @
+	// │        └─ X's son #
+	// │
+	// ├─ son B
+	// │  ├─ B's son 1
+	// │  ├─ B's son 2
+	// │  └─ orphan
+	// │
+	// ├─ son B
+	// │  └─ B's son 1
+	// │
+	// └─ police
 	// }}}
 }
 
@@ -247,7 +246,7 @@ func ExampleHierarchicalError() {
 			Push(
 				smartError{"smart", errors.New("hierarchical")},
 				smartError{"smart", errors.New("hierarchical")},
-				smartError{"smart", Errorf("nested", "top")},
+				smartError{"smart", Errorf(fmt.Sprintf("%s", "nest"), "top")},
 			),
 		),
 	}
@@ -290,6 +289,6 @@ func ExampleHierarchicalError() {
 	//    │  └─ hierarchical
 	//    └─ smart
 	//       └─ top
-	//          └─ nested
+	//          └─ nest
 	// }}}
 }
