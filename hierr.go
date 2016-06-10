@@ -20,35 +20,35 @@ import (
 )
 
 const (
-	// BranchDelimiterASCII represents a simple ASCII delimiter for hierarcy
+	// BranchDelimiterASCII represents a simple ASCII delimiter for hierarchy
 	// branches.
 	//
 	// Use: hierr.BranchDelimiter = hierr.BranchDelimiterASCII
 	BranchDelimiterASCII = `\_ `
 
-	// BranchDelimiterBox represents UTF8 delimiter for hierarcy branches.
+	// BranchDelimiterBox represents UTF8 delimiter for hierarchy branches.
 	//
 	// Use: hierr.BranchDelimiter = hierr.BranchDelimiterBox
 	BranchDelimiterBox = `└─ `
 
-	// BranchChainerASCII represents a simple ASCII chainer for hierarcy
+	// BranchChainerASCII represents a simple ASCII chainer for hierarchy
 	// branches.
 	//
 	// Use: hierr.BranchChainer = hierr.BranchChainerASCII
 	BranchChainerASCII = `| `
 
-	// BranchChainerBox represents UTF8 chainer for hierarcy branches.
+	// BranchChainerBox represents UTF8 chainer for hierarchy branches.
 	//
 	// Use: hierr.BranchChainer = hierr.BranchChainerBox
 	BranchChainerBox = `│ `
 
-	// BranchSplitterASCII represents a simple ASCII splitter for hierarcy
+	// BranchSplitterASCII represents a simple ASCII splitter for hierarchy
 	// branches.
 	//
 	// Use: hierr.BranchSplitter = hierr.BranchSplitterASCII
 	BranchSplitterASCII = `+ `
 
-	// BranchSplitterBox represents UTF8 splitter for hierarcy branches.
+	// BranchSplitterBox represents UTF8 splitter for hierarchy branches.
 	//
 	// Use: hierr.BranchSplitter = hierr.BranchSplitterBox
 	BranchSplitterBox = `├─ `
