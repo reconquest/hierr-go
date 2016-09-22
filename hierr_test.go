@@ -222,6 +222,14 @@ func (smart smartError) HierarchicalError() string {
 	return Errorf(smart.Err, smart.Text).Error()
 }
 
+func (smart smartError) GetNested() []NestedError {
+	return []NestedError{smart.Err}
+}
+
+func (smart smartError) GetMessage() string {
+	return smart.Text
+}
+
 func ExampleHierarchicalError() {
 	testcases := []error{
 		Errorf(
@@ -291,6 +299,7 @@ func ExampleHierarchicalError() {
 	//    └─ hierarchical
 	//    ├─ smart
 	//    │  └─ hierarchical
+	//    │
 	//    └─ smart
 	//       └─ top
 	//          └─ nest

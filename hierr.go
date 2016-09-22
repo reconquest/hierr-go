@@ -85,6 +85,12 @@ type Error struct {
 type HierarchicalError interface {
 	// HierarchicalError returns hierarhical string representation.
 	HierarchicalError() string
+
+	// GetNested returns slice of nested errors.
+	GetNested() []NestedError
+
+	// GetMessage returns top-level error message.
+	GetMessage() string
 }
 
 var (
@@ -142,6 +148,29 @@ func (err Error) Error() string {
 	}
 }
 
+// GetNested returns nested errors, embedded into error.
+func (err Error) GetNested() []NestedError {
+	children, ok := err.Nested.([]NestedError)
+	if !ok {
+		children = []NestedError{}
+		if err.Nested != nil {
+			children = append(children, err.Nested)
+		}
+	}
+
+	return children
+}
+
+// GetMessage returns top-level error message.
+func (err Error) GetMessage() string {
+	return err.Message
+}
+
+// HierarchicalError returns pretty hierarchical rendering.
+func (err Error) HierarchicalError() string {
+	return err.Error()
+}
+
 // Push creates new hierarchy error with multiple branches separated by
 // separator, delimited by delimiter and prolongated by prolongator.
 func Push(topError NestedError, childError ...NestedError) error {
@@ -152,13 +181,7 @@ func Push(topError NestedError, childError ...NestedError) error {
 		}
 	}
 
-	children, ok := parent.Nested.([]NestedError)
-	if !ok {
-		children = []NestedError{}
-		if parent.Nested != nil {
-			children = append(children, parent.Nested)
-		}
-	}
+	children := parent.GetNested()
 
 	children = append(children, childError...)
 
@@ -188,9 +211,9 @@ func formatNestedError(err Error, children []NestedError) string {
 
 	prolongate := false
 	for _, child := range children {
-		if childError, ok := child.(Error); ok {
-			errs, ok := childError.Nested.([]NestedError)
-			if ok && len(errs) > 0 {
+		if childError, ok := child.(HierarchicalError); ok {
+			errs := childError.GetNested()
+			if len(errs) > 0 {
 				prolongate = true
 				break
 			}
