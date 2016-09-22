@@ -176,6 +176,10 @@ func String(object interface{}) string {
 		return hierr.HierarchicalError()
 	}
 
+	if err, ok := object.(error); ok {
+		return err.Error()
+	}
+
 	return fmt.Sprintf("%s", object)
 }
 

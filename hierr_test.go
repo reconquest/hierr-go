@@ -41,7 +41,11 @@ func ExampleError() {
 
 	Fatalf(fmt.Sprintf("%s", "wow"), "critical error")
 
-	_ := tempfile.Seek(0, 0)
+	_, err = tempfile.Seek(0, 0)
+	if err != nil {
+		panic(err)
+	}
+
 	text, err := ioutil.ReadAll(tempfile)
 	if err != nil {
 		panic(err)
