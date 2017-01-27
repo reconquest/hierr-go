@@ -10,7 +10,7 @@
 //         can't pull remote 'origin'
 //         └─ can't run git fetch 'origin' 'refs/tokens/*:refs/tokens/*'
 //            └─ exit status 128
-package hierr
+package hierr // import "github.com/reconquest/hierr-go"
 
 import (
 	"fmt"
