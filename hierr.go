@@ -191,6 +191,10 @@ func Push(topError NestedError, childError ...NestedError) error {
 	}
 }
 
+func Context(context NestedError, description ...NestedError) error {
+	return Push(context, description...)
+}
+
 // String returns string representation of given object, if object implements
 // HierarchicalError then will be returned result of calling
 // object.HierarchicalError().
