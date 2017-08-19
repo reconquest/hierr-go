@@ -100,18 +100,41 @@ var (
 // NestedError is either `error` or string.
 type NestedError interface{}
 
+// ErrorContext is a simple context for labeling errors.
+type ErrorContext error
+
 // Errorf creates new hierarchy error.
 //
 // With nestedError == nil call will be equal to `fmt.Errorf()`.
 func Errorf(
 	nestedError NestedError,
 	message string,
-	args ...interface{},
+	options ...interface{},
 ) error {
-	return Error{
+	var args []interface{}
+	var contexts []ErrorContext
+
+	for _, option := range options {
+		switch option := option.(type) {
+		case ErrorContext:
+			contexts = append(contexts, option)
+		default:
+			args = append(args, option)
+		}
+	}
+
+	var err error
+
+	err = Error{
 		Message: fmt.Sprintf(message, args...),
 		Nested:  nestedError,
 	}
+
+	for _, context := range contexts {
+		err = Push(err, context)
+	}
+
+	return err
 }
 
 // Fatalf creates new hierarchy error, prints to stderr and exit 1
@@ -191,8 +214,9 @@ func Push(topError NestedError, childError ...NestedError) error {
 	}
 }
 
-func Context(context NestedError, description ...NestedError) error {
-	return Push(context, description...)
+// Context returns context which can be used to label errors.
+func Context(context NestedError, description ...NestedError) ErrorContext {
+	return ErrorContext(Push(context, description...))
 }
 
 // String returns string representation of given object, if object implements
