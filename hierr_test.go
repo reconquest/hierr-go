@@ -232,27 +232,27 @@ func (smart smartError) GetMessage() string {
 
 func ExampleContext() {
 	testcases := []error{
-		AddContext(
+		Context(
 			Errorf(
 				errors.New(`failed to parse int`),
 				`no config field: %s`,
 				`some_config_field`,
 			),
-			fmt.Sprintf(`config: %s`, `/path/to/config.yaml`),
+			Context(fmt.Sprintf(`config: %s`, `/path/to/config.yaml`)),
 		),
 
-		AddContext(
+		Context(
 			errors.New(`fatal error`),
-			`database`, `localhost:1234`,
+			Context(`database`, `localhost:1234`),
 		),
 
-		AddContext(
+		Context(
 			Errorf(
 				errors.New(`fatal error`),
 				`some error occured`,
 			),
-			`database`, `localhost:1234`,
-			`node`, `node-a.localdomain`,
+			Context(`database`, `localhost:1234`),
+			Context(`node`, `node-a.localdomain`),
 		),
 	}
 

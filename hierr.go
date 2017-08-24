@@ -100,9 +100,6 @@ var (
 // NestedError is either `error` or string.
 type NestedError interface{}
 
-// ErrorContext is a simple context for labeling errors.
-type ErrorContext error
-
 // Errorf creates new hierarchy error.
 //
 // With nestedError == nil call will be equal to `fmt.Errorf()`.
@@ -194,31 +191,19 @@ func Push(topError NestedError, childError ...NestedError) error {
 	}
 }
 
-// Context returns context which can be used to label errors.
-func AddContext(
-	err error,
-	args ...interface{},
-	//context NestedError,
-	//description ...NestedError,
-) error {
-	for i := 0; i < len(args); i += 2 {
-		var context error
-
-		if i+1 < len(args) {
-			context = Push(args[i], args[i+1])
-		} else {
-			context = Push(args[i])
-		}
-
-		err = Push(err, context)
-	}
-
-	return err
+// Context adds context to specified top-level node.
+//
+// Context can be passed to rest of the call to add multiple labels to
+// given error:
+//	hierr.Context(
+//		err,
+//		hierr.Context(`mailer`, `localhost:25`),
+//		hierr.Context(`config`, `/path/to/config.toml`),
+//	)
+func Context(node NestedError, description ...NestedError) error {
+	return Push(node, description...)
 }
 
-// String returns string representation of given object, if object implements
-// HierarchicalError then will be returned result of calling
-// object.HierarchicalError().
 func String(object interface{}) string {
 	if hierr, ok := object.(HierarchicalError); ok {
 		return hierr.HierarchicalError()
