@@ -181,12 +181,8 @@ func TestContext_CanAddMultipleKeyValues(t *testing.T) {
 		output(
 			"unable to resolve",
 			"├─ system error",
-			"│",
-			"├─ host",
-			"│  └─ example.com",
-			"│",
-			"└─ operation",
-			"   └─ resolv",
+			"├─ host: example.com",
+			"└─ operation: resolv",
 		),
 	)
 }
@@ -202,12 +198,8 @@ func TestContext_CanAddWithoutHierarchy(t *testing.T) {
 		),
 		output(
 			"system error",
-			"│",
-			"├─ operation",
-			"│  └─ resolv",
-			"│",
-			"└─ host",
-			"   └─ example.com",
+			"├─ operation: resolv",
+			"└─ host: example.com",
 		),
 	)
 }
@@ -223,9 +215,7 @@ func TestContext_CanAddToRootError(t *testing.T) {
 		output(
 			"unable to resolve",
 			"├─ system error",
-			"│",
-			"└─ host",
-			"   └─ example.com",
+			"└─ host: example.com",
 		),
 	)
 }
@@ -243,12 +233,9 @@ func TestContext_CanAddToReasonError(t *testing.T) {
 		output(
 			"unable to resolve",
 			"├─ system error",
-			"│  │",
-			"│  └─ os",
-			"│     └─ linux",
+			"│  └─ os: linux",
 			"│",
-			"└─ host",
-			"   └─ example.com",
+			"└─ host: example.com",
 		),
 	)
 }
@@ -308,12 +295,8 @@ func ExampleContext_MultipleKeyValues() {
 	// Output:
 	//
 	// unable to foo on zen
-	// │
-	// ├─ method
-	// │  └─ foo
-	// │
-	// └─ arg
-	//    └─ zen
+	// ├─ method: foo
+	// └─ arg: zen
 }
 
 func ExampleContext_NestedErrors() {
@@ -351,12 +334,9 @@ func ExampleContext_NestedErrors() {
 	//
 	// unable to perform critical operation
 	// ├─ unable to foo on zen
-	// │  │
-	// │  └─ arg
-	// │     └─ zen
+	// │  └─ arg: zen
 	// │
-	// └─ operation
-	//    └─ foo
+	// └─ operation: foo
 }
 
 func ExampleContext_AddNestedContext() {
@@ -390,12 +370,8 @@ func ExampleContext_AddNestedContext() {
 	// Output:
 	//
 	// unable to foo
-	// │
-	// ├─ level
-	// │  └─ bar
-	// │
-	// └─ level
-	//    └─ baz
+	// ├─ level: bar
+	// └─ level: baz
 }
 
 func ExampleContext_UseCustomLoggingFormat() {

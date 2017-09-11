@@ -134,7 +134,7 @@ func Fatalf(
 // error was specified, then only current error message will be returned.
 func (err Error) Error() string {
 	err.Context.Walk(func(name string, value interface{}) {
-		err = Push(err, Push(name, value)).(Error)
+		err = Push(err, Push(fmt.Sprintf("%s: %s", name, value))).(Error)
 	})
 
 	switch value := err.Reason.(type) {
