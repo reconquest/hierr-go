@@ -212,8 +212,8 @@ func Push(reason Reason, reasons ...Reason) error {
 
 // Context creates new context list, which can be used to produce context-rich
 // hierarchical error.
-func Context(key string, value interface{}) ErrorContext {
-	return ErrorContext{
+func Context(key string, value interface{}) *ErrorContext {
+	return &ErrorContext{
 		Key:   key,
 		Value: value,
 	}

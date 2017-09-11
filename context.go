@@ -13,7 +13,7 @@ type ErrorContext struct {
 
 // Context adds new key-value context pair to current context list and return
 // current context list.
-func (context ErrorContext) Context(
+func (context *ErrorContext) Context(
 	key string,
 	value interface{},
 ) *ErrorContext {
@@ -25,7 +25,7 @@ func (context ErrorContext) Context(
 
 	context.Previous = previous
 
-	return &context
+	return context
 }
 
 // Errorf produces context-rich hierarchical error, which will include all
