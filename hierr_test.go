@@ -5,362 +5,444 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func ExampleError() {
-	testcases := []error{
-		Errorf(nil, ""),
-		Errorf(nil, "simple error"),
-		Errorf(nil, "integer: %d", 1),
-		Errorf(errors.New("nested"), "top level"),
-		Errorf(errors.New("nested"), "top level: %s", "formatting"),
-		Errorf(Errorf(errors.New("low level"), "nested"), "top level"),
-		Errorf(Errorf(fmt.Sprintf("%s", "string"), "nested"), "top level"),
-		Errorf([]byte("byte"), "top level"),
-	}
+func TestErrorf_CanFormatEmptyError(t *testing.T) {
+	test := assert.New(t)
 
-	for _, test := range testcases {
-		fmt.Println()
-		fmt.Println("{{{")
-		fmt.Println(test.Error())
-		fmt.Println("}}}")
-	}
-
-	fmt.Println()
-
-	exiter = func(code int) {
-		fmt.Println("exit code:", code)
-	}
-
-	tempfile, err := ioutil.TempFile(os.TempDir(), "stderr")
-	if err != nil {
-		panic(err)
-	}
-
-	os.Stderr = tempfile
-
-	Fatalf(fmt.Sprintf("%s", "wow"), "critical error")
-
-	_, err = tempfile.Seek(0, 0)
-	if err != nil {
-		panic(err)
-	}
-
-	text, err := ioutil.ReadAll(tempfile)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("stderr:\n" + string(text))
-
-	// Output:
-	//
-	// {{{
-	//
-	// }}}
-	//
-	// {{{
-	// simple error
-	// }}}
-	//
-	// {{{
-	// integer: 1
-	// }}}
-	//
-	// {{{
-	// top level
-	// └─ nested
-	// }}}
-	//
-	// {{{
-	// top level: formatting
-	// └─ nested
-	// }}}
-	//
-	// {{{
-	// top level
-	// └─ nested
-	//    └─ low level
-	// }}}
-	//
-	// {{{
-	// top level
-	// └─ nested
-	//    └─ string
-	// }}}
-	//
-	// {{{
-	// top level
-	// └─ byte
-	// }}}
-	//
-	// exit code: 1
-	// stderr:
-	// critical error
-	// └─ wow
+	test.EqualError(Errorf(nil, ""), "")
 }
 
-func ExampleBranchDelimiter() {
+func TestErrorf_CanFormatSimpleStringError(t *testing.T) {
+	test := assert.New(t)
+
+	test.EqualError(Errorf(nil, "simple error"), "simple error")
+}
+
+func TestErrorf_CanFormatSimpleStringErrorWithArgs(t *testing.T) {
+	test := assert.New(t)
+
+	test.EqualError(Errorf(nil, "integer: %d", 9), "integer: 9")
+}
+
+func TestErrorf_CanFormatErrorWithSimpleReason(t *testing.T) {
+	test := assert.New(t)
+
+	test.EqualError(
+		Errorf(errors.New("reason"), "everything has a reason"),
+		output(
+			"everything has a reason",
+			"└─ reason",
+		),
+	)
+}
+
+func TestErrorf_CanFormatErrorWithSimpleReasonAndArgs(t *testing.T) {
+	test := assert.New(t)
+
+	test.EqualError(
+		Errorf(errors.New("reason"), "reasons: %d", 1),
+		output(
+			"reasons: 1",
+			"└─ reason",
+		),
+	)
+}
+
+func TestErrorf_CanFormatHierarchicalReason(t *testing.T) {
+	test := assert.New(t)
+
+	test.EqualError(
+		Errorf(Errorf(errors.New("reason"), "cause"), "karma"),
+		output(
+			"karma",
+			"└─ cause",
+			"   └─ reason",
+		),
+	)
+}
+
+func TestErrorf_CanFormatHierarchicalReasonWithSimpleReason(t *testing.T) {
+	test := assert.New(t)
+
+	test.EqualError(
+		Errorf(Errorf("reason", "cause"), "karma"),
+		output(
+			"karma",
+			"└─ cause",
+			"   └─ reason",
+		),
+	)
+}
+
+func TestErrorf_CanFormatAnyReason(t *testing.T) {
+	test := assert.New(t)
+
+	test.EqualError(
+		Errorf([]byte("self"), "no"),
+		output(
+			"no",
+			"└─ self",
+		),
+	)
+}
+
+func TestFatalf_CanUseCustomExiter(t *testing.T) {
+	test := assert.New(t)
+
 	defer func() {
-		BranchDelimiter = BranchDelimiterBox
+		exiter = os.Exit
+	}()
+
+	code := 0
+	exiter = func(status int) {
+		code = status
+	}
+
+	stderr := os.Stderr
+	defer func() {
+		os.Stderr = stderr
+	}()
+
+	var err error
+
+	os.Stderr, err = ioutil.TempFile(os.TempDir(), "stderr")
+	test.NoError(err)
+
+	Fatalf("wow", "critical error")
+
+	_, err = os.Stderr.Seek(0, 0)
+	test.NoError(err)
+
+	message, err := ioutil.ReadAll(os.Stderr)
+	test.NoError(err)
+	test.Equal(1, code)
+	test.Equal(
+		output(
+			"critical error",
+			"└─ wow\n",
+		),
+		string(message),
+	)
+}
+
+func TestCanSetBranchDelimiter(t *testing.T) {
+	test := assert.New(t)
+
+	delimiter := BranchDelimiter
+	defer func() {
+		BranchDelimiter = delimiter
 	}()
 
 	BranchDelimiter = "* "
 
-	testcases := []error{
-		Errorf(Errorf(errors.New("third"), "second"), "top level"),
-	}
-
-	for _, test := range testcases {
-		fmt.Println()
-		fmt.Println("{{{")
-		fmt.Println(test.Error())
-		fmt.Println("}}}")
-	}
-
-	// Output:
-	//
-	// {{{
-	// top level
-	// * second
-	//    * third
-	// }}}
+	test.EqualError(
+		Errorf(Errorf("first", "second"), "third"),
+		output(
+			"third",
+			"* second",
+			"   * first",
+		),
+	)
 }
 
-func ExampleBranchIndent() {
+func TestCanSetBranchIndent(t *testing.T) {
+	test := assert.New(t)
+
+	indent := BranchIndent
 	defer func() {
-		BranchIndent = 3
+		BranchIndent = indent
 	}()
 
 	BranchIndent = 0
 
-	testcases := []error{
-		Errorf(Errorf(errors.New("third"), "second"), "top level"),
-	}
-
-	for _, test := range testcases {
-		fmt.Println()
-		fmt.Println("{{{")
-		fmt.Println(test.Error())
-		fmt.Println("}}}")
-	}
-
-	// Output:
-	//
-	// {{{
-	// top level
-	// └─ second
-	// └─ third
-	// }}}
-}
-
-func ExamplePush() {
-	testcases := []error{
-		Push(
-			"the godfather",
-			Push(
-				"son A",
-				"A's son 1",
-				Push(
-					"A's son 2",
-					Push("2' son X",
-						Push("X's son @"),
-						Push("X's son #"),
-					),
-				),
-			),
-			Push("son B",
-				errors.New("B's son 1"),
-				errors.New("B's son 2"),
-				Push("orphan"),
-			),
-			Errorf(
-				fmt.Sprintf("%s", "B's son 1"),
-				"son B",
-			),
-			errors.New("police"),
+	test.EqualError(
+		Errorf(Errorf("first", "second"), "third"),
+		output(
+			"third",
+			"└─ second",
+			"└─ first",
 		),
-	}
-
-	for _, test := range testcases {
-		fmt.Println()
-		fmt.Println("{{{")
-		fmt.Println(test.Error())
-		fmt.Println("}}}")
-	}
-
-	// Output:
-	//
-	// {{{
-	// the godfather
-	// ├─ son A
-	// │  ├─ A's son 1
-	// │  │
-	// │  └─ A's son 2
-	// │     └─ 2' son X
-	// │        ├─ X's son @
-	// │        └─ X's son #
-	// │
-	// ├─ son B
-	// │  ├─ B's son 1
-	// │  ├─ B's son 2
-	// │  └─ orphan
-	// │
-	// ├─ son B
-	// │  └─ B's son 1
-	// │
-	// └─ police
-	// }}}
+	)
 }
 
-type smartError struct {
-	Text string
-	Err  error
+func TestContext_CanAddMultipleKeyValues(t *testing.T) {
+	test := assert.New(t)
+
+	test.EqualError(
+		Context("host", "example.com").Context("operation", "resolv").Errorf(
+			"system error",
+			"unable to resolve",
+		),
+		output(
+			"unable to resolve",
+			"├─ system error",
+			"├─ host: example.com",
+			"└─ operation: resolv",
+		),
+	)
 }
 
-func (smart smartError) HierarchicalError() string {
-	return Errorf(smart.Err, smart.Text).Error()
-}
+func TestContext_CanAddWithoutHierarchy(t *testing.T) {
+	test := assert.New(t)
 
-func (smart smartError) GetNested() []NestedError {
-	return []NestedError{smart.Err}
-}
-
-func (smart smartError) GetMessage() string {
-	return smart.Text
-}
-
-func ExampleContext() {
-	testcases := []error{
-		Context(
-			Errorf(
-				errors.New(`failed to parse int`),
-				`no config field: %s`,
-				`some_config_field`,
+	test.EqualError(
+		Context("host", "example.com").Reason(
+			Context("operation", "resolv").Reason(
+				"system error",
 			),
-			Context(fmt.Sprintf(`config: %s`, `/path/to/config.yaml`)),
 		),
-
-		Context(
-			errors.New(`fatal error`),
-			Context(`database`, `localhost:1234`),
+		output(
+			"system error",
+			"├─ operation: resolv",
+			"└─ host: example.com",
 		),
-
-		Context(
-			Errorf(
-				errors.New(`fatal error`),
-				`some error occured`,
-			),
-			Context(`database`, `localhost:1234`),
-			Context(`node`, `node-a.localdomain`),
-		),
-	}
-
-	for _, test := range testcases {
-		fmt.Println()
-		fmt.Println("{{{")
-		fmt.Println(test.Error())
-		fmt.Println("}}}")
-	}
-
-	// Output:
-	//
-	// {{{
-	// no config field: some_config_field
-	// ├─ failed to parse int
-	// └─ config: /path/to/config.yaml
-	// }}}
-	//
-	// {{{
-	// fatal error
-	// └─ database
-	//    └─ localhost:1234
-	// }}}
-	//
-	// {{{
-	// some error occured
-	// ├─ fatal error
-	// │
-	// ├─ database
-	// │  └─ localhost:1234
-	// │
-	// └─ node
-	//    └─ node-a.localdomain
-	// }}}
+	)
 }
 
-func ExampleHierarchicalError() {
-	testcases := []error{
+func TestContext_CanAddToRootError(t *testing.T) {
+	test := assert.New(t)
+
+	test.EqualError(
+		Context("host", "example.com").Errorf(
+			"system error",
+			"unable to resolve",
+		),
+		output(
+			"unable to resolve",
+			"├─ system error",
+			"└─ host: example.com",
+		),
+	)
+}
+
+func TestContext_CanAddToReasonError(t *testing.T) {
+	test := assert.New(t)
+
+	test.EqualError(
+		Context("host", "example.com").Errorf(
+			Context("os", "linux").Reason(
+				"system error",
+			),
+			"unable to resolve",
+		),
+		output(
+			"unable to resolve",
+			"├─ system error",
+			"│  └─ os: linux",
+			"│",
+			"└─ host: example.com",
+		),
+	)
+}
+
+type customError struct {
+	Text   string
+	Reason error
+}
+
+func (err customError) Error() string {
+	return Errorf(err.Reason, err.GetMessage()).Error()
+}
+
+func (err customError) GetNested() []Reason {
+	return []Reason{err.Reason}
+}
+
+func (err customError) GetMessage() string {
+	return strings.ToUpper(err.Text)
+}
+
+func TestCustomHierarchicalError(t *testing.T) {
+	test := assert.New(t)
+
+	test.EqualError(
 		Errorf(
-			Errorf(
-				smartError{"smart", errors.New("hierarchical")},
-				"second",
-			),
-			"top level",
+			customError{"upper", errors.New("hierarchical")},
+			"example of custom error",
 		),
-		Errorf(
-			Errorf(
-				fmt.Sprintf(
-					"%s",
-					smartError{"smart plain", errors.New("error")},
-				),
-				"second",
-			),
-			"top level",
+		output(
+			"example of custom error",
+			"└─ UPPER",
+			"   └─ hierarchical",
 		),
-		Push(
-			smartError{"smart", errors.New("hierarchical")},
-			smartError{"smart", errors.New("hierarchical")},
-		),
-		Push(
-			smartError{"smart", errors.New("hierarchical")},
-			Push(
-				smartError{"smart", errors.New("hierarchical")},
-				smartError{"smart", errors.New("hierarchical")},
-				smartError{"smart", Errorf(fmt.Sprintf("%s", "nest"), "top")},
-			),
-		),
+	)
+}
+
+func ExampleContext_MultipleKeyValues() {
+	foo := func(arg string) error {
+		return fmt.Errorf("unable to foo on %s", arg)
 	}
 
-	for _, test := range testcases {
-		fmt.Println()
-		fmt.Println("{{{")
-		fmt.Println(test.Error())
-		fmt.Println("}}}")
+	bar := func() error {
+		err := foo("zen")
+		if err != nil {
+			return Context("method", "foo").Context("arg", "zen").Reason(err)
+		}
+
+		return nil
+	}
+
+	err := bar()
+	if err != nil {
+		fmt.Println(err)
 	}
 
 	// Output:
 	//
-	// {{{
-	// top level
-	// └─ second
-	//    └─ smart
-	//       └─ hierarchical
-	// }}}
+	// unable to foo on zen
+	// ├─ method: foo
+	// └─ arg: zen
+}
+
+func ExampleContext_NestedErrors() {
+	foo := func(arg string) error {
+		return fmt.Errorf("unable to foo on %s", arg)
+	}
+
+	bar := func() error {
+		err := foo("zen")
+		if err != nil {
+			return Context("arg", "zen").Reason(err)
+		}
+
+		return nil
+	}
+
+	baz := func() error {
+		err := bar()
+		if err != nil {
+			return Context("operation", "foo").Errorf(
+				err,
+				"unable to perform critical operation",
+			)
+		}
+
+		return nil
+	}
+
+	err := baz()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Output:
 	//
-	// {{{
-	// top level
-	// └─ second
-	//    └─ {smart plain error}
-	// }}}
+	// unable to perform critical operation
+	// ├─ unable to foo on zen
+	// │  └─ arg: zen
+	// │
+	// └─ operation: foo
+}
+
+func ExampleContext_AddNestedContext() {
+	foo := func() error {
+		return fmt.Errorf("unable to foo")
+	}
+
+	bar := func() error {
+		err := foo()
+		if err != nil {
+			return Context("level", "bar").Reason(err)
+		}
+
+		return nil
+	}
+
+	baz := func() error {
+		err := bar()
+		if err != nil {
+			return Context("level", "baz").Reason(err)
+		}
+
+		return nil
+	}
+
+	err := baz()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Output:
 	//
-	// {{{
-	// smart
-	// └─ hierarchical
-	// └─ smart
-	//    └─ hierarchical
-	// }}}
+	// unable to foo
+	// ├─ level: bar
+	// └─ level: baz
+}
+
+func ExampleContext_UseCustomLoggingFormat() {
+	// solve function represents deepest function in the call stack
+	solve := func(koan string) error {
+		return fmt.Errorf("no solution available for %q", koan)
+	}
+
+	// think represents function, which calls solve function
+	think := func() error {
+		err := solve("what was your face before your parents were born?")
+		if err != nil {
+			return Context("though", "koan").Reason(err)
+		}
+
+		return nil
+	}
+
+	// realize represents top-level function, which calls think function
+	realize := func() error {
+		context := Context("doing", "realization")
+		err := think()
+		if err != nil {
+			return context.Context("action", "thinking").Errorf(
+				err,
+				"unable to attain realization",
+			)
+		}
+
+		return nil
+	}
+
+	// log represents custom logging function, which writes structured logs,
+	// like logrus in format [LEVEL] message: key1=value1 key2=value2
+	log := func(level string, message string, kv ...interface{}) {
+		fmt.Printf("[%s] %s:", level, message)
+
+		for i := 0; i < len(kv); i += 2 {
+			fmt.Printf(" %s=%q", kv[i], kv[i+1])
+		}
+
+		fmt.Println()
+	}
+
+	err := realize()
+	if err != nil {
+		if err, ok := err.(Error); ok {
+			// following call will write all nested errors
+			err.Descend(func(err Error) {
+				log(
+					"ERROR",
+					err.GetMessage(),
+					err.GetContext().GetKeyValuePairs()...,
+				)
+			})
+
+			// this call will write only root-level error
+			log(
+				"FATAL",
+				err.GetMessage(),
+				err.GetContext().GetKeyValuePairs()...,
+			)
+		}
+	}
+
+	// Output:
 	//
-	// {{{
-	// smart
-	// └─ hierarchical
-	// └─ smart
-	//    └─ hierarchical
-	//    ├─ smart
-	//    │  └─ hierarchical
-	//    │
-	//    └─ smart
-	//       └─ top
-	//          └─ nest
-	// }}}
+	// [ERROR] no solution available for "what was your face before your parents were born?": though="koan"
+	// [FATAL] unable to attain realization: doing="realization" action="thinking"
+}
+
+func output(lines ...string) string {
+	return strings.Join(lines, "\n")
 }
