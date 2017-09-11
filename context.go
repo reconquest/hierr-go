@@ -4,20 +4,20 @@ import (
 	"fmt"
 )
 
-// ErrorContext is a element of key-value linked list of error contexts.
-type ErrorContext struct {
+// Ctx is a element of key-value linked list of error contexts.
+type Ctx struct {
 	Key      string
 	Value    interface{}
-	Previous *ErrorContext
+	Previous *Ctx
 }
 
 // Context adds new key-value context pair to current context list and return
 // current context list.
-func (context *ErrorContext) Context(
+func (context *Ctx) Context(
 	key string,
 	value interface{},
-) *ErrorContext {
-	previous := &ErrorContext{
+) *Ctx {
+	previous := &Ctx{
 		Key:      key,
 		Value:    value,
 		Previous: context.Previous,
@@ -30,7 +30,7 @@ func (context *ErrorContext) Context(
 
 // Errorf produces context-rich hierarchical error, which will include all
 // previously declared context key-value pairs.
-func (context ErrorContext) Errorf(
+func (context Ctx) Errorf(
 	reason Reason,
 	message string,
 	args ...interface{},
@@ -44,7 +44,7 @@ func (context ErrorContext) Errorf(
 
 // Reason adds current context to the specified error. If error is not
 // hierarchical error, it will be converted to such.
-func (context ErrorContext) Reason(reason Reason) error {
+func (context Ctx) Reason(reason Reason) error {
 	if previous, ok := reason.(Error); ok {
 		context.Walk(func(key string, value interface{}) {
 			previous.Context = previous.Context.Context(key, value)
@@ -61,7 +61,7 @@ func (context ErrorContext) Reason(reason Reason) error {
 
 // Walk iterates over all key-value context pairs and calls specified
 // callback for each.
-func (context *ErrorContext) Walk(callback func(string, interface{})) {
+func (context *Ctx) Walk(callback func(string, interface{})) {
 	if context == nil {
 		return
 	}
@@ -75,7 +75,7 @@ func (context *ErrorContext) Walk(callback func(string, interface{})) {
 
 // GetKeyValuePairs returns slice of key-value context pairs, which will
 // be always even, each even index is key and each odd index is value.
-func (context *ErrorContext) GetKeyValuePairs() []interface{} {
+func (context *Ctx) GetKeyValuePairs() []interface{} {
 	pairs := []interface{}{}
 
 	context.Walk(func(name string, value interface{}) {

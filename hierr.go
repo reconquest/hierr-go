@@ -81,7 +81,7 @@ type Error struct {
 
 	// Context is a key-pair linked list, which represents runtime context
 	// of the error.
-	Context *ErrorContext
+	Context *Ctx
 }
 
 // HierarchicalError represents interface, which methods will be used instead
@@ -179,7 +179,7 @@ func (err Error) GetMessage() string {
 }
 
 // GetContext returns context
-func (err Error) GetContext() *ErrorContext {
+func (err Error) GetContext() *Ctx {
 	return err.Context
 }
 
@@ -212,8 +212,8 @@ func Push(reason Reason, reasons ...Reason) error {
 
 // Context creates new context list, which can be used to produce context-rich
 // hierarchical error.
-func Context(key string, value interface{}) *ErrorContext {
-	return &ErrorContext{
+func Context(key string, value interface{}) *Ctx {
+	return &Ctx{
 		Key:   key,
 		Value: value,
 	}
