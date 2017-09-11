@@ -72,22 +72,26 @@ var (
 
 // Error represents hierarchy error, linked with nested error.
 type Error struct {
+	// Reason error, which can be hierr.Error as well.
+	Reason Reason
+
 	// Message is formatter error message, which will be reported when Error()
 	// will be invoked.
 	Message string
 
-	// Nested error, which can be hierr.Error as well.
-	Nested interface{}
+	// Context is a key-pair linked list, which represents runtime context
+	// of the error.
+	Context *ErrorContext
 }
 
 // HierarchicalError represents interface, which methods will be used instead
 // of calling String() and Error() methods.
 type HierarchicalError interface {
-	// HierarchicalError returns hierarhical string representation.
-	HierarchicalError() string
+	// Error returns hierarchical string representation.
+	Error() string
 
-	// GetNested returns slice of nested errors.
-	GetNested() []NestedError
+	// GetReasons returns slice of nested errors.
+	GetReasons() []Reason
 
 	// GetMessage returns top-level error message.
 	GetMessage() string
@@ -97,20 +101,20 @@ var (
 	exiter = os.Exit
 )
 
-// NestedError is either `error` or string.
-type NestedError interface{}
+// Reason is either `error` or string.
+type Reason interface{}
 
 // Errorf creates new hierarchy error.
 //
-// With nestedError == nil call will be equal to `fmt.Errorf()`.
+// With reason == nil call will be equal to `fmt.Errorf()`.
 func Errorf(
-	nestedError NestedError,
+	reason Reason,
 	message string,
 	args ...interface{},
 ) error {
 	return Error{
 		Message: fmt.Sprintf(message, args...),
-		Nested:  nestedError,
+		Reason:  reason,
 	}
 }
 
@@ -118,29 +122,33 @@ func Errorf(
 //
 // Have same semantics as `hierr.Errorf()`.
 func Fatalf(
-	nestedError NestedError,
+	reason Reason,
 	message string,
 	args ...interface{},
 ) {
-	fmt.Fprintln(os.Stderr, Errorf(nestedError, message, args...))
+	fmt.Fprintln(os.Stderr, Errorf(reason, message, args...))
 	exiter(1)
 }
 
 // Error returns string representation of hierarchical error. If no nested
 // error was specified, then only current error message will be returned.
 func (err Error) Error() string {
-	switch children := err.Nested.(type) {
+	err.Context.Walk(func(name string, value interface{}) {
+		err = Push(err, Push(name, value)).(Error)
+	})
+
+	switch value := err.Reason.(type) {
 	case nil:
 		return err.Message
 
-	case []NestedError:
-		return formatNestedError(err, children)
+	case []Reason:
+		return formatReasons(err, value)
 
 	default:
 		return err.Message + "\n" +
 			BranchDelimiter +
 			strings.Replace(
-				String(err.Nested),
+				String(err.Reason),
 				"\n",
 				"\n"+strings.Repeat(" ", BranchIndent),
 				-1,
@@ -148,65 +156,73 @@ func (err Error) Error() string {
 	}
 }
 
-// GetNested returns nested errors, embedded into error.
-func (err Error) GetNested() []NestedError {
-	children, ok := err.Nested.([]NestedError)
-	if !ok {
-		children = []NestedError{}
-		if err.Nested != nil {
-			children = append(children, err.Nested)
-		}
+// GetReasons returns nested errors, embedded into error.
+func (err Error) GetReasons() []Reason {
+	if err.Reason == nil {
+		return nil
 	}
 
-	return children
+	if reasons, ok := err.Reason.([]Reason); ok {
+		return reasons
+	} else {
+		return []Reason{err.Reason}
+	}
 }
 
-// GetMessage returns top-level error message.
+// GetMessage returns error message
 func (err Error) GetMessage() string {
-	return err.Message
+	if err.Message == "" {
+		return fmt.Sprint(err.Reason)
+	} else {
+		return err.Message
+	}
 }
 
-// HierarchicalError returns pretty hierarchical rendering.
-func (err Error) HierarchicalError() string {
-	return err.Error()
+// GetContext returns context
+func (err Error) GetContext() *ErrorContext {
+	return err.Context
+}
+
+// Descend calls specified callback for every nested hierarchical error.
+func (err Error) Descend(callback func(Error)) {
+	for _, reason := range err.GetReasons() {
+		if reason, ok := reason.(Error); ok {
+			callback(reason)
+
+			reason.Descend(callback)
+		}
+	}
 }
 
 // Push creates new hierarchy error with multiple branches separated by
 // separator, delimited by delimiter and prolongated by prolongator.
-func Push(topError NestedError, childError ...NestedError) error {
-	parent, ok := topError.(Error)
+func Push(reason Reason, reasons ...Reason) error {
+	parent, ok := reason.(Error)
 	if !ok {
 		parent = Error{
-			Message: String(topError),
+			Message: String(reason),
 		}
 	}
 
-	children := parent.GetNested()
-
-	children = append(children, childError...)
-
 	return Error{
 		Message: parent.Message,
-		Nested:  children,
+		Reason:  append(parent.GetReasons(), reasons...),
 	}
 }
 
-// Context adds context to specified top-level node.
-//
-// Context can be passed to rest of the call to add multiple labels to
-// given error:
-//	hierr.Context(
-//		err,
-//		hierr.Context(`mailer`, `localhost:25`),
-//		hierr.Context(`config`, `/path/to/config.toml`),
-//	)
-func Context(node NestedError, description ...NestedError) error {
-	return Push(node, description...)
+// Context creates new context list, which can be used to produce context-rich
+// hierarchical error.
+func Context(key string, value interface{}) ErrorContext {
+	return ErrorContext{
+		Key:   key,
+		Value: value,
+	}
 }
 
+// String returns hierarchy-aware string representation of passed object.
 func String(object interface{}) string {
 	if hierr, ok := object.(HierarchicalError); ok {
-		return hierr.HierarchicalError()
+		return hierr.Error()
 	}
 
 	if err, ok := object.(error); ok {
@@ -216,28 +232,27 @@ func String(object interface{}) string {
 	return fmt.Sprintf("%s", object)
 }
 
-func formatNestedError(err Error, children []NestedError) string {
+func formatReasons(err Error, reasons []Reason) string {
 	message := err.Message
 
 	prolongate := false
-	for _, child := range children {
-		if childError, ok := child.(HierarchicalError); ok {
-			errs := childError.GetNested()
-			if len(errs) > 0 {
+	for _, reason := range reasons {
+		if reasons, ok := reason.(HierarchicalError); ok {
+			if len(reasons.GetReasons()) > 0 {
 				prolongate = true
 				break
 			}
 		}
 	}
 
-	for index, child := range children {
+	for index, reason := range reasons {
 		var (
 			splitter      = BranchSplitter
 			chainer       = BranchChainer
 			chainerLength = len([]rune(BranchChainer))
 		)
 
-		if index == len(children)-1 {
+		if index == len(reasons)-1 {
 			splitter = BranchDelimiter
 			chainer = strings.Repeat(" ", chainerLength)
 		}
@@ -248,21 +263,23 @@ func formatNestedError(err Error, children []NestedError) string {
 		}
 
 		prolongator := ""
-		if prolongate && index < len(children)-1 {
+		if prolongate && index < len(reasons)-1 {
 			prolongator = "\n" + strings.TrimRightFunc(
 				chainer, unicode.IsSpace,
 			)
 		}
 
-		message = message + "\n" +
-			splitter +
-			strings.Replace(
-				String(child),
-				"\n",
-				"\n"+indentation,
-				-1,
-			) +
-			prolongator
+		if message != "" {
+			message = message + "\n" + splitter
+		}
+
+		message += strings.Replace(
+			String(reason),
+			"\n",
+			"\n"+indentation,
+			-1,
+		)
+		message += prolongator
 	}
 
 	return message
